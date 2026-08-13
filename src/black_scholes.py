@@ -80,10 +80,7 @@ def black_scholes(ticker_symbol, option_type="call"):
     else:
         return round((K * math.pow(math.e, -1 * r * T) * norm.cdf(-1 * d2)) - (S * norm.cdf(-d1)), 2)
 
-    
 
-if __name__ == "__main__":
-    print(black_scholes("AAPL"))
     
     
     
