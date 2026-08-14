@@ -18,23 +18,32 @@ def get_strike_info(curr_price, ticker,
                      expiration_date, 
                      option_type="call") -> list:
     opt_chain = ticker.option_chain(expiration_date)
-    options = opt_chain.calls[["strike", "lastPrice", "impliedVolatility"]]
-    if option_type == "put": 
+    if option_type == "call":
+        options = opt_chain.calls[["strike", "lastPrice", "impliedVolatility"]]
+    else: 
         options = opt_chain.puts[["strike", "lastPrice", "impliedVolatility"]]
     
     print(options["strike"], "\n")
     print("Current Price: ", curr_price, "\n")
 
     K = -1.0
-    while float(K) not in options["strike"].values:
+    while True:
         K = input("Enter Strike Price: ")
-        if float(K) not in options["strike"].values:
+        try: 
+            K = float(K)
+        except:
             print("Invalid Strike Price.")
+            continue
+        if K not in options["strike"].values:
+            print("Invalid Strike Price.")
+        else:
+            break
 
-    implied_volatility = options.loc[options["strike"] == float(K), "impliedVolatility"].values[0]
-    option_price = options.loc[options["strike"] == float(K), "lastPrice"].values[0]
 
-    return [float(K), implied_volatility, option_price]
+    implied_volatility = options.loc[options["strike"] == K, "impliedVolatility"].values[0]
+    option_price = options.loc[options["strike"] == K, "lastPrice"].values[0]
+
+    return [K, implied_volatility, option_price]
 
 def get_time_to_expiration(expiration_date) -> float:
     curr_date = dt.date.today()
@@ -52,7 +61,7 @@ def get_rf(time_to_expiry) -> float:
     ticker = yf.Ticker(ticker_symbol)
     return ticker.fast_info["lastPrice"] / 100.0
 
-def black_scholes(stock_price, strike_info, expiration_date, option_type="call"):
+def black_scholes(stock_price, strike_info, sigma, expiration_date, option_type="call"):
 
     """ S : current stock price
         K : option strike price
@@ -62,8 +71,9 @@ def black_scholes(stock_price, strike_info, expiration_date, option_type="call")
         option_type : 'call' or 'put' """
     
     K = strike_info[0]
-    sigma = strike_info[1]
     T = get_time_to_expiration(expiration_date)
+    if T == 0:
+        return 0.0
     r = get_rf(T)
     d1 = math.log(stock_price / K) + ((r + (math.pow(sigma, 2) / 2)) * T)
     d1 /= (sigma * math.sqrt(T))
